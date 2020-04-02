@@ -158,9 +158,11 @@ class Main_Frame(QMainWindow):
 
     def choose_file(self):
         # QFileDialog.setWindowIcon(self,QIcon('图片集合/尴尬.PNG'))  #TODO 如何设置对话框图片
-
         '''选择某个文件'''
         try:
+            if self.mode in [0, 1, 2]:
+                QMessageBox.warning(self,'警告', '还未保存当前工作,请保存后在尝试！', buttons=QMessageBox.Yes, defaultButton=QMessageBox.Yes)
+                return
             print('打开文件！')
             file_path = \
                 QFileDialog.getOpenFileName(self, caption='请选择一个excel文件...', directory=r'C:\Users\24839\Desktop',
