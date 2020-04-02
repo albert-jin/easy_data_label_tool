@@ -8,16 +8,18 @@ Communicate ways:QQ(248390697)、wx:--
 last edited : 2020/3/27
 '''
 import json
+from Special_textedit import Special_sentence_textedit, Special_flag_textedit
 from pathlib import Path
 from random import choice
-from sys import argv,exit
+from sys import argv, exit
 from Select_Index_Dialog import Select_Index_Dialog
 from File_resovle import File_resovle
 from PyQt5.QtWidgets import QApplication, QWidget, \
     QToolTip, QAction, QPushButton, QMainWindow, QMessageBox, \
-    QDesktopWidget,  QVBoxLayout, QHBoxLayout, QFileDialog, \
-    QInputDialog, QTextEdit, QLineEdit, QLabel,QSplitter
+    QDesktopWidget, QVBoxLayout, QHBoxLayout, QFileDialog, \
+    QInputDialog, QTextEdit, QLineEdit, QLabel, QSplitter
 from PyQt5.QtGui import QIcon, QFont, QPixmap
+from PyQt5 import QtCore
 
 
 class Main_Frame(QMainWindow):
@@ -43,17 +45,17 @@ class Main_Frame(QMainWindow):
         # 标注句子的分类 mode：0
         # 标注句子中特定位置token mode：1
         # 以上两者都标注 mode：2
-        self.mode = -1 #Todo
-        self.index =-1
+        self.mode = -1  # Todo
+        self.index = -1
         self.SID = None  # 为了防止子窗口瞬间消失
         self.setToolTip('主窗口')
         self.setWindowTitle('最简易的数据标准软件')
         self.resize(765, 520)
         self.setWindowIcon(QIcon('图片集合/猪头.PNG'))
         self.set_menu()
-        self.central_panel =None
+        self.central_panel = None
         self.btn_open = None
-        self.btn_next =None
+        self.btn_next = None
         self.btn_last = None
         self.laoba_label = None
         self.laoba = None
@@ -61,95 +63,99 @@ class Main_Frame(QMainWindow):
         self.sentence_edit = None
         self.contents_title = None
         self.contents_edit = None
-        self.progress_label =None
+        self.progress_label = None
         self.flag_title = None
         self.flag_edit = None
         self.vbox = None
         self.hbox0 = None
         # self.hbox1 = None 用可缩放代替，更加人性化！
-        self.hbox1_2_spliter =None
+        self.hbox1_2_spliter = None
         self.hbox2 = None
         self.change_view()
         self.make_center()
         self.show()
 
-    #保存到excel文件
+    # 保存到excel文件
     def save_file_2excel(self):
         try:
             print('保存文件2excel')
-            excel_filepath,file_type = QFileDialog.getSaveFileName(self,'保存标注到excel...',directory=r'C:\Users\24839\Desktop', \
-                                                                   filter='new_Excel Files(*.xlsx);;old_Excel Files(*xls)')
+            excel_filepath, file_type = QFileDialog.getSaveFileName(self, '保存标注到excel...',
+                                                                    directory=r'C:\Users\24839\Desktop', \
+                                                                    filter='new_Excel Files(*.xlsx);;old_Excel Files(*xls)')
             print(excel_filepath)
             if not excel_filepath:
                 return
             else:
                 self.excel_store(excel_filepath)
         except Exception as e:
-            print('保存标注到excel出错，原因：',e.args)
+            print('保存标注到excel出错，原因：', e.args)
         else:
-            self.is_stored = True  #修改标志为成功保存
-            self.data =None
-            self.mode=-1  #初始化窗口排布
+            self.is_stored = True  # 修改标志为成功保存
+            self.data = None
+            self.mode = -1  # 初始化窗口排布
             self.change_view()
 
-    def excel_store(self,excel_filepath): #TODO
+    def excel_store(self, excel_filepath):  # TODO
         pass
 
-    #保存到json文件
+    # 保存到json文件
     def save_file_2json(self):
         try:
-            if not self.data :
-                QMessageBox.warning(self,'保存失败','你还未打开文件,无数据！',buttons=QMessageBox.Yes,defaultButton=QMessageBox.Yes)
+            if not self.data:
+                QMessageBox.warning(self, '保存失败', '你还未打开文件,无数据！', buttons=QMessageBox.Yes,
+                                    defaultButton=QMessageBox.Yes)
                 return
-            json_filepath,file_type= QFileDialog.getSaveFileName(self,'保存标注到json...',directory=r'C:\Users\24839\Desktop',filter='json Files(*.json)')
+            json_filepath, file_type = QFileDialog.getSaveFileName(self, '保存标注到json...',
+                                                                   directory=r'C:\Users\24839\Desktop',
+                                                                   filter='json Files(*.json)')
             if not json_filepath:
                 return
             else:
                 print('将data保存2json', json_filepath)
-                info =self.json_store(json_filepath)
+                info = self.json_store(json_filepath)
         except Exception as e:
-            print('保存标注到json出错，原因：',e.args)
+            print('保存标注到json出错，原因：', e.args)
         else:
-            QMessageBox.information(self,'json保存成功',info+'\n'+'之后可以继续打开文件并进行标注...',buttons=QMessageBox.Yes,defaultButton=QMessageBox.Yes)
+            QMessageBox.information(self, 'json保存成功', info + '\n' + '之后可以继续打开文件并进行标注...', buttons=QMessageBox.Yes,
+                                    defaultButton=QMessageBox.Yes)
             self.is_stored = True
-            self.data=None
+            self.data = None
             self.mode = -1  # 初始化窗口排布
             self.change_view()
 
-    def json_store(self,json_filepath): #(1)如果文件已存在，将标注内容新增进去，否则创建新文件
+    def json_store(self, json_filepath):  # (1)如果文件已存在，将标注内容新增进去，否则创建新文件
         '''data means[{'sentence':__,<'flag':__,'content':__>},.....]'''
         if Path.exists(Path(json_filepath)):
-            with Path(json_filepath).open(mode='r',encoding='utf-8') as inf:
-                origin_data =json.load(inf)
-                change_count =0
-                add_count =0
+            with Path(json_filepath).open(mode='r', encoding='utf-8') as inf:
+                origin_data = json.load(inf)
+                change_count = 0
+                add_count = 0
                 for new_item in self.data:
                     if 'sentence' in new_item:
                         flag = True
                         for index in range(len(origin_data)):
                             if 'sentence' in origin_data[index]:
                                 if new_item['sentence'] == origin_data[index]['sentence']:
-                                    flag =False
-                                    change_count+=1
-                                    origin_data[index] =new_item
+                                    flag = False
+                                    change_count += 1
+                                    origin_data[index] = new_item
                                     break
-                        if flag ==True:
+                        if flag == True:
                             origin_data.append(new_item)
-                            add_count +=1
-                info0 ='修改了{}项,新增了{}项'.format(change_count,add_count)
+                            add_count += 1
+                info0 = '修改了{}项,新增了{}项'.format(change_count, add_count)
                 print(info0)
             with Path(json_filepath).open(mode='w', encoding='utf-8') as outf:
-                json.dump(origin_data,outf,ensure_ascii=False)
-                info1 ='往新文件{}共写入{}项'.format(json_filepath,len(self.data))
+                json.dump(origin_data, outf, ensure_ascii=False)
+                info1 = '往新文件{}共写入{}项'.format(json_filepath, len(self.data))
             print(info1)
-            return info0+'\n'+info1
+            return info0 + '\n' + info1
         else:
-            with Path.open(Path(json_filepath),mode='w',encoding='utf-8') as outf:
-                json.dump(self.data,outf,ensure_ascii=False)
-                info ='往新文件{}共写入{}项'.format(json_filepath,len(self.data))
+            with Path.open(Path(json_filepath), mode='w', encoding='utf-8') as outf:
+                json.dump(self.data, outf, ensure_ascii=False)
+                info = '往新文件{}共写入{}项'.format(json_filepath, len(self.data))
                 print(info)
-            return  info
-
+            return info
 
     def choose_file(self):
         # QFileDialog.setWindowIcon(self,QIcon('图片集合/尴尬.PNG'))  #TODO 如何设置对话框图片
@@ -158,15 +164,15 @@ class Main_Frame(QMainWindow):
         try:
             print('打开文件！')
             file_path = \
-            QFileDialog.getOpenFileName(self, caption='请选择一个excel文件...', directory=r'C:\Users\24839\Desktop',
-                                        filter='new_Excel Files(*.xlsx);;old_Excel Files(*xls);;Txt Files(*.txt)',
-                                        options=QFileDialog.DontUseNativeDialog)[0]
+                QFileDialog.getOpenFileName(self, caption='请选择一个excel文件...', directory=r'C:\Users\24839\Desktop',
+                                            filter='new_Excel Files(*.xlsx);;old_Excel Files(*xls);;Txt Files(*.txt)',
+                                            options=QFileDialog.DontUseNativeDialog)[0]
             if file_path is None or len(file_path) == 0 or '.xls' not in file_path:  # TODO 这里限制了只pick  excel
                 return
             else:
                 self.file_path = file_path
         except Exception as e:
-            print('选择文件失败',e.args)
+            print('选择文件失败', e.args)
             return
 
         '''若是excel，则选择其中一个表格'''
@@ -200,7 +206,7 @@ class Main_Frame(QMainWindow):
             else:
                 return
         except Exception as e:
-            print('设置模式失败,原因',e.args)
+            print('设置模式失败,原因', e.args)
             return
 
         '''选择表格中的begin-row,end-row,sentence-col-idx,flag-col-idx,content-col-index'''
@@ -283,17 +289,16 @@ class Main_Frame(QMainWindow):
                                                 4] else None
                                             )
         if not self.data:
-            QMessageBox.warning(self,'读取excel错误','读出的内容为空！！',buttons=QMessageBox.Yes,defaultButton=QMessageBox.Yes)
+            QMessageBox.warning(self, '读取excel错误', '读出的内容为空！！', buttons=QMessageBox.Yes, defaultButton=QMessageBox.Yes)
             return
-        print('数据查找到',len(self.data),'项,可视化前五项:', self.data[0:5])  #只是为了验证数据合理性
-        self.index =-1
+        print('数据查找到', len(self.data), '项,可视化前五项:', self.data[0:5])  # 只是为了验证数据合理性
+        self.index = -1
         self.change_view()
-        self.is_stored =False
-
+        self.is_stored = False
 
     def change_view(self):
-        if self.mode == 0:   #只标注句子分类
-            self.progress_label =QLabel('目前您正处于[未开始{}/{}]'.format(self.index+1,len(self.data)))
+        if self.mode == 0:  # 只标注句子分类
+            self.progress_label = QLabel('目前您正处于[未开始{}/{}]'.format(self.index + 1, len(self.data)))
             self.btn_next = self.my_create_Button(name='下一页(Alt+&S)', icon=QIcon('图片集合/竖大拇指反向.PNG'),
                                                   trigger_function=self.next_sentence)
             self.btn_last = self.my_create_Button(name='上一页(Alt+&W)', icon=QIcon('图片集合/竖大拇指.PNG'),
@@ -319,10 +324,9 @@ class Main_Frame(QMainWindow):
             # self.hbox1.addStretch()
             # self.hbox1.addWidget(self.flag_edit)
             # self.hbox1.addStretch()
-            self.hbox1_2_spliter =QSplitter()
+            self.hbox1_2_spliter = QSplitter()
             self.hbox1_2_spliter.addWidget(self.sentence_edit)
             self.hbox1_2_spliter.addWidget(self.flag_edit)
-
 
             self.hbox2 = QHBoxLayout()
             self.hbox2.addWidget(self.btn_last)
@@ -342,8 +346,8 @@ class Main_Frame(QMainWindow):
             self.central_panel.setLayout(self.vbox)
             self.statusBar().showMessage('正在模式0（flag）...')
 
-        elif self.mode == 1:   #只标注content
-            self.progress_label =QLabel('目前您正处于[未开始{}/{}]'.format(self.index+1,len(self.data)))
+        elif self.mode == 1:  # 只标注content
+            self.progress_label = QLabel('目前您正处于[未开始{}/{}]'.format(self.index + 1, len(self.data)))
             self.sentence_title = QLabel('需标注的句子：')
             self.sentence_edit = QTextEdit('点击下方“下一页(Alt+S)”按钮开始标注...')
             self.sentence_edit.setReadOnly(True)
@@ -353,7 +357,7 @@ class Main_Frame(QMainWindow):
                                                   trigger_function=self.next_sentence)
             self.btn_last = self.my_create_Button(name='上一页(Alt+&W)', icon=QIcon('图片集合/竖大拇指.PNG'),
                                                   trigger_function=self.last_sentence)
-            self.central_panel =QWidget()
+            self.central_panel = QWidget()
             self.setCentralWidget(self.central_panel)
 
             self.hbox0 = QHBoxLayout()
@@ -368,10 +372,9 @@ class Main_Frame(QMainWindow):
             # self.hbox1.addStretch()
             # self.hbox1.addWidget(self.contents_edit)
             # self.hbox1.addStretch()
-            self.hbox1_2_spliter =QSplitter()
+            self.hbox1_2_spliter = QSplitter()
             self.hbox1_2_spliter.addWidget(self.sentence_edit)
             self.hbox1_2_spliter.addWidget(self.contents_edit)
-
 
             self.hbox2 = QHBoxLayout()
             self.hbox2.addWidget(self.btn_last)
@@ -390,8 +393,8 @@ class Main_Frame(QMainWindow):
 
             self.central_panel.setLayout(self.vbox)
             self.statusBar().showMessage('正在模式1（content）...')
-        elif self.mode == 2:  #两个都标注
-            self.progress_label =QLabel('目前您正处于[未开始{}/{}]'.format(self.index+1,len(self.data)))
+        elif self.mode == 2:  # 两个都标注
+            self.progress_label = QLabel('目前您正处于[未开始{}/{}]'.format(self.index + 1, len(self.data)))
             self.sentence_title = QLabel('需标注的句子：')
             self.sentence_edit = QTextEdit('点击下方“下一页(Alt+S)”按钮开始标注...')
             self.sentence_edit.setReadOnly(True)
@@ -419,12 +422,10 @@ class Main_Frame(QMainWindow):
             # self.hbox1.addWidget(self.contents_edit)
             # self.hbox1.addStretch()
             # self.hbox1.addWidget(self.flag_edit)
-            self.hbox1_2_spliter=QSplitter()
+            self.hbox1_2_spliter = QSplitter()
             self.hbox1_2_spliter.addWidget(self.sentence_edit)
             self.hbox1_2_spliter.addWidget(self.contents_edit)
             self.hbox1_2_spliter.addWidget(self.flag_edit)
-
-
 
             self.hbox2 = QHBoxLayout()
             self.hbox2.addWidget(self.btn_last)
@@ -454,7 +455,7 @@ class Main_Frame(QMainWindow):
             self.central_panel = QWidget()
             self.setCentralWidget(self.central_panel)
             self.vbox = QVBoxLayout()
-            self.hbox0=QHBoxLayout()
+            self.hbox0 = QHBoxLayout()
             self.hbox0.addStretch()
             self.hbox0.addWidget(self.laoba_label)
             self.hbox0.addStretch()
@@ -466,19 +467,20 @@ class Main_Frame(QMainWindow):
             self.central_panel.setLayout(self.vbox)
 
             self.statusBar().showMessage('待选择文件...')
-    def last_sentence(self): #TODO 事件触发保存此时的内容进self.data,并加入is_stored 的事件,修改progress_label
-        print('点击了上一个')
-        #将上一个标注写入data
-        try:
-            if self.mode !=0: #设置content
-                self.data[self.index]['content'] =self.contents_edit.toPlainText()
-            if self.mode !=1:  #设置flag
-                self.data[self.index]['flag'] =self.flag_edit.text()
 
-            if self.index <=0:
-                QMessageBox.warning(self,'温馨提示..','您已经在标注位置最前了,不能再往前回退了！',buttons=QMessageBox.Yes)
+    def last_sentence(self):  # TODO 事件触发保存此时的内容进self.data,并加入is_stored 的事件,修改progress_label
+        print('点击了上一个')
+        # 将上一个标注写入data
+        try:
+            if self.mode != 0:  # 设置content
+                self.data[self.index]['content'] = self.contents_edit.toPlainText()
+            if self.mode != 1:  # 设置flag
+                self.data[self.index]['flag'] = self.flag_edit.text()
+
+            if self.index <= 0:
+                QMessageBox.warning(self, '温馨提示..', '您已经在标注位置最前了,不能再往前回退了！', buttons=QMessageBox.Yes)
                 return
-            self.index-=1
+            self.index -= 1
             self.sentence_edit.setReadOnly(False)
             self.sentence_edit.setText(self.data[self.index]['sentence'])
             self.sentence_edit.setReadOnly(True)
@@ -492,13 +494,13 @@ class Main_Frame(QMainWindow):
                     self.flag_edit.setText(self.data[self.index]['flag'])
                 else:
                     self.flag_edit.setText('')
-            self.progress_label.setText('目前您正在标注,进度：[{}/{}]'.format(self.index+1,len(self.data)))
+            self.progress_label.setText('目前您正在标注,进度：[{}/{}]'.format(self.index + 1, len(self.data)))
         except Exception as e:
             QMessageBox.warning(self, '错误！', '翻上一页时遇到错误,原因：{}'.format(e.args))
 
-    def next_sentence(self): #TODO 同上
+    def next_sentence(self):  # TODO 同上
         print('点击了下一个')
-        #将上一个标注写入data
+        # 将上一个标注写入data
         try:
             if self.index >= 0:
                 if self.mode != 0:
@@ -521,13 +523,12 @@ class Main_Frame(QMainWindow):
                     self.contents_edit.setText('')
             if self.mode != 1:
                 if 'flag' in self.data[self.index]:
-                   self.flag_edit.setText(self.data[self.index]['flag'])
+                    self.flag_edit.setText(self.data[self.index]['flag'])
                 else:
                     self.flag_edit.setText('')
             self.progress_label.setText('目前您正在标注,进度：[{}/{}]'.format(self.index + 1, len(self.data)))
         except Exception as e:
-            QMessageBox.warning(self,'错误！','翻下一页时遇到错误,原因：{}'.format(e.args))
-
+            QMessageBox.warning(self, '错误！', '翻下一页时遇到错误,原因：{}'.format(e.args))
 
     def show_information(self):
         try:
@@ -550,12 +551,13 @@ class Main_Frame(QMainWindow):
                                                    trigger_function=self.choose_file)
         first_menu.addAction(self.choose_Action)
         ##保存原文件到excel
-        self.save_Action0 = self.my_create_Action(name='保存标注到excel（可修改原excel）', icon=QIcon('图片集合/狗头.PNG'),shortcut='Ctrl+E',
-                                                 trigger_function=self.save_file_2excel)
+        self.save_Action0 = self.my_create_Action(name='保存标注到excel（可修改原excel）', icon=QIcon('图片集合/狗头.PNG'),
+                                                  shortcut='Ctrl+E',
+                                                  trigger_function=self.save_file_2excel)
         first_menu.addAction(self.save_Action0)
         ##保存原文件到json
-        self.save_Action1 = self.my_create_Action(name='保存标注到json (推荐)', icon=QIcon('图片集合/树懒.PNG'),shortcut='Ctrl+S',\
-                                                trigger_function=self.save_file_2json)
+        self.save_Action1 = self.my_create_Action(name='保存标注到json (推荐)', icon=QIcon('图片集合/树懒.PNG'), shortcut='Ctrl+S', \
+                                                  trigger_function=self.save_file_2json)
         first_menu.addAction(self.save_Action1)
         # 菜单栏 --工具
         second_menu = menuBar.addMenu('&工具 tools')
@@ -573,7 +575,7 @@ class Main_Frame(QMainWindow):
         second_menu.addAction(self.next_page_Action)
         ##切换背景图片
         self.change_background_Action = self.my_create_Action(name='切换随机背景', icon=QIcon('图片集合/rose.PNG'),
-                                                      trigger_function=self.change_background)
+                                                              trigger_function=self.change_background)
         second_menu.addAction(self.change_background_Action)
 
         # 菜单栏 --帮助
@@ -585,11 +587,11 @@ class Main_Frame(QMainWindow):
         third_menu.addAction(self.show_information_Action)
         ##查看教程
         self.show_guide_Action = self.my_create_Action(name='查看帮助文档', icon=QIcon('图片集合/蒙蔽脸.PNG'),
-                                                             shortcut='Ctrl+H',
-                                                             trigger_function=self.show_guide)
+                                                       shortcut='Ctrl+H',
+                                                       trigger_function=self.show_guide)
         third_menu.addAction(self.show_guide_Action)
 
-    #帮助文档显示
+    # 帮助文档显示
     def show_guide(self):
         try:
             QMessageBox.information(self, '帮助信息', '1.初版的软件只加了读excel&写入json的功能,暂时够用就好,以后持续扩充'
@@ -597,10 +599,12 @@ class Main_Frame(QMainWindow):
                                                   '\n还未写使用文档,要提醒的是，多帮我找些bug出来,谢谢！')
         except Exception as e:
             print(e.args)
-    #切换背景图片
+
+    # 切换背景图片
     def change_background(self):
-        image_list =['background-image:url(图片集合/背景_绿.PNG)','background-image:url(图片集合/哆啦A梦.PNG)','图片集合/纯白背景图.PNG']
+        image_list = ['background-image:url(图片集合/背景_绿.PNG)', 'background-image:url(图片集合/哆啦A梦.PNG)', '图片集合/纯白背景图.PNG']
         self.setStyleSheet(choice(image_list))
+
     # 重写关闭窗口事件处理函数
     def closeEvent(self, close_event):
         '''
@@ -609,10 +613,10 @@ class Main_Frame(QMainWindow):
         '''
         try:
             if self.is_stored == False:
-                query = QMessageBox.warning(self, '警告', '注意！你尚未保存最近一次修改，是否保存？\n（__声明不保存导致的后果自负，作者不承担__）',
+                query = QMessageBox.warning(self, '警告', '注意！你尚未保存最近一次修改，是否保存？\n（声明:__不保存导致的后果自负，作者不承担__）',
                                             buttons=QMessageBox.Yes | QMessageBox.No, defaultButton=QMessageBox.Yes)
                 if query == QMessageBox.Yes:
-                    self.save_file()
+                    self.save_file_2json()
             query = QMessageBox.question(self, '温馨提示', self.tr('你确定终止该工作流吗？'), buttons= \
                 QMessageBox.Yes | QMessageBox.No, defaultButton=QMessageBox.No)
             if query == QMessageBox.Yes:
@@ -672,6 +676,7 @@ class Main_Frame(QMainWindow):
         except Exception as e:
             print(name + '按钮创建失败，失败原因：{}'.format(str(e.args)))
             return None
+
 
 if __name__ == '__main__':
     app = QApplication(argv)
